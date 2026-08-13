@@ -1,21 +1,14 @@
 
-import base64
-
-# Read the Z9X image
-with open('/mnt/agents/upload/8DA35B2A-B069-41C2-9453-D2B405BA0839.jpg', 'rb') as f:
-    img_data = f.read()
-    img_base64 = base64.b64encode(img_data).decode('utf-8')
-
-z9x_image_uri = f"data:image/jpeg;base64,{img_base64}"
-
-# Build HTML in parts to avoid f-string issues with JS braces
-html_part1 = '''<!DOCTYPE html>
+html_content = r'''<!DOCTYPE html>
 <html lang="ar" dir="rtl">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <meta name="theme-color" content="#0a0a12">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title>Z9X - Legendary Roblox Mods</title>
+    <link rel="manifest" href="data:application/json;base64,eyJuYW1lIjoiWjlYIiwic2hvcnRfbmFtZSI6Ilo5WCIsInN0YXJ0X3VybCI6Ii4iLCJkaXNwbGF5Ijoic3RhbmRhbG9uZSIsImJhY2tncm91bmRfY29sb3IiOiIjMGEwYTEyIiwidGhlbWVfY29sb3IiOiIjMGEwYTEyIn0=">
     <style>
         :root {
             --bg: #0a0a12;
@@ -38,7 +31,7 @@ html_part1 = '''<!DOCTYPE html>
             touch-action: manipulation;
         }
         body {
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             background: var(--bg);
             color: var(--text);
             min-height: 100vh;
@@ -75,6 +68,7 @@ html_part1 = '''<!DOCTYPE html>
             height: 58px;
             background: rgba(10,10,18,0.92);
             backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
             border-bottom: 1px solid rgba(139,92,246,0.08);
             display: flex;
             align-items: center;
@@ -126,14 +120,45 @@ html_part1 = '''<!DOCTYPE html>
             height: 200px;
             margin: 0 auto 18px;
             border-radius: 28px;
-            overflow: hidden;
+            background: linear-gradient(135deg, #1a1a2e, #0f3460);
+            display: flex;
+            align-items: center;
+            justify-content: center;
             box-shadow: 0 0 50px rgba(139,92,246,0.25), 0 0 100px rgba(59,130,246,0.08);
+            overflow: hidden;
+            position: relative;
         }
-        .hero-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
+        .hero-img::before {
+            content: '';
+            position: absolute;
+            inset: -50%;
+            background: conic-gradient(from 0deg, transparent, var(--purple), transparent 30%);
+            animation: spin 4s linear infinite;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+        .hero-img-inner {
+            position: relative;
+            z-index: 1;
+            width: calc(100% - 4px);
+            height: calc(100% - 4px);
+            background: var(--bg);
+            border-radius: 26px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+        }
+        .hero-img-inner span {
+            font-size: 64px;
+            font-weight: 900;
+            background: linear-gradient(135deg, #a78bfa, #60a5fa);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .hero-img-inner small {
+            font-size: 12px;
+            color: var(--text-dim);
+            margin-top: 4px;
         }
         .hero-title {
             font-size: 20px;
@@ -200,11 +225,7 @@ html_part1 = '''<!DOCTYPE html>
             display: flex;
             align-items: center;
             justify-content: center;
-        }
-        .tool-img img {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            font-size: 50px;
         }
         .tool-name {
             font-size: 22px;
@@ -323,6 +344,7 @@ html_part1 = '''<!DOCTYPE html>
             inset: 0;
             background: rgba(0,0,0,0.75);
             backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
             z-index: 2000;
             display: none;
             align-items: center;
@@ -385,6 +407,7 @@ html_part1 = '''<!DOCTYPE html>
             inset: 0;
             background: rgba(0,0,0,0.55);
             backdrop-filter: blur(4px);
+            -webkit-backdrop-filter: blur(4px);
             z-index: 1500;
             display: none;
             opacity: 0;
@@ -456,6 +479,28 @@ html_part1 = '''<!DOCTYPE html>
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            left: 50%;
+            transform: translateX(-50%) translateY(100px);
+            background: var(--card-hover);
+            border: 1px solid rgba(139,92,246,0.3);
+            color: var(--text);
+            padding: 14px 24px;
+            border-radius: 16px;
+            font-size: 14px;
+            font-weight: 700;
+            z-index: 3000;
+            opacity: 0;
+            transition: all 0.4s cubic-bezier(0.4,0,0.2,1);
+            pointer-events: none;
+            white-space: nowrap;
+        }
+        .toast.show {
+            transform: translateX(-50%) translateY(0);
+            opacity: 1;
+        }
         ::-webkit-scrollbar { width: 5px; }
         ::-webkit-scrollbar-track { background: var(--bg); }
         ::-webkit-scrollbar-thumb { background: var(--purple); border-radius: 3px; }
@@ -483,8 +528,8 @@ html_part1 = '''<!DOCTYPE html>
                 <span class="sidebar-header-text">📱 ايفون</span>
             </div>
             <div class="sidebar-items">
-                <div class="sidebar-item" onclick="goToTool(\'delta\')">هاك روبلوكس ايفون</div>
-                <div class="sidebar-item" onclick="goToTool(\'delta\')">روبلوكس القديمه (بيكورا)</div>
+                <div class="sidebar-item" onclick="goToTool('delta')">هاك روبلوكس ايفون</div>
+                <div class="sidebar-item" onclick="goToTool('delta')">روبلوكس القديمه (بيكورا)</div>
             </div>
         </div>
         <div class="sidebar-section">
@@ -493,8 +538,8 @@ html_part1 = '''<!DOCTYPE html>
                 <span class="sidebar-header-text">🤖 اندرويد</span>
             </div>
             <div class="sidebar-items">
-                <div class="sidebar-item" onclick="goToTool(\'delta-android\')">هاك روبلوكس اندرويد</div>
-                <div class="sidebar-item" onclick="goToTool(\'delta-android\')">روبلوكس القديمه (بيكورا)</div>
+                <div class="sidebar-item" onclick="goToTool('delta-android')">هاك روبلوكس اندرويد</div>
+                <div class="sidebar-item" onclick="goToTool('delta-android')">روبلوكس القديمه (بيكورا)</div>
             </div>
         </div>
         <div class="sidebar-section">
@@ -503,8 +548,8 @@ html_part1 = '''<!DOCTYPE html>
                 <span class="sidebar-header-text">💻 بي سي</span>
             </div>
             <div class="sidebar-items">
-                <div class="sidebar-item" onclick="goToTool(\'pc-hacker\')">هاك روبلوكس بي سي</div>
-                <div class="sidebar-item" onclick="goToTool(\'pc-hacker\')">روبلوكس القديمه (بيكورا)</div>
+                <div class="sidebar-item" onclick="goToTool('pc-hacker')">هاك روبلوكس بي سي</div>
+                <div class="sidebar-item" onclick="goToTool('pc-hacker')">روبلوكس القديمه (بيكورا)</div>
             </div>
         </div>
         <div class="sidebar-section">
@@ -513,7 +558,7 @@ html_part1 = '''<!DOCTYPE html>
                 <span class="sidebar-header-text">🛡️ حماية وأمان</span>
             </div>
             <div class="sidebar-items">
-                <div class="sidebar-item" onclick="goToPage(\'security\')">تطبيقات أمنة وموثوقة</div>
+                <div class="sidebar-item" onclick="goToPage('security')">تطبيقات أمنة وموثوقة</div>
             </div>
         </div>
     </div>
@@ -526,46 +571,51 @@ html_part1 = '''<!DOCTYPE html>
         </div>
     </div>
     
+    <div class="toast" id="toast"></div>
+    
     <main class="main">
         <div class="wrap">
             
             <div id="page-home" class="page active">
                 <div class="hero">
                     <div class="hero-img">
-                        <img src="''' + z9x_image_uri + '''" alt="Z9X Logo">
+                        <div class="hero-img-inner">
+                            <span>Z9X</span>
+                            <small>Legendary Mods</small>
+                        </div>
                     </div>
                     <h1 class="hero-title">مرحباً بكم في موقع <span>Z9X</span></h1>
                 </div>
-                <div class="card" onclick="showModal(\'ios\')">
+                <div class="card" onclick="showModal('ios')">
                     <span class="card-icon">📱</span>
                     <div class="card-title">iOS تطبيقات</div>
                     <div class="card-sub">هاك روبلوكس + روبلوكس القديمه (بيكورا)</div>
                 </div>
-                <div class="card" onclick="showModal(\'android\')">
+                <div class="card" onclick="showModal('android')">
                     <span class="card-icon">🤖</span>
                     <div class="card-title">Android تطبيقات</div>
                     <div class="card-sub">هاك روبلوكس + روبلوكس القديمه (بيكورا)</div>
                 </div>
-                <div class="card" onclick="showModal(\'pc\')">
+                <div class="card" onclick="showModal('pc')">
                     <span class="card-icon">💻</span>
                     <div class="card-title">PC تطبيقات</div>
                     <div class="card-sub">هاك روبلوكس + روبلوكس القديمه (بيكورا)</div>
                 </div>
-                <div class="card" onclick="goToPage(\'security\')">
+                <div class="card" onclick="goToPage('security')">
                     <span class="card-icon">🛡️</span>
                     <div class="card-title">حماية وأمان</div>
                     <div class="card-sub">تطبيقات أمنة وموثوقة</div>
                 </div>
                 <div class="social">
                     <a href="#" class="btn btn-blue" style="display:flex;align-items:center;justify-content:center;gap:10px;">🎮 ديسكورد</a>
-                    <a href="#" class="btn btn-cyan" style="display:flex;align-items:center;justify-content:center;gap:10px;">📱 تنزيل الموقع</a>
+                    <button class="btn btn-cyan" style="display:flex;align-items:center;justify-content:center;gap:10px;" onclick="installApp()">📱 تنزيل الموقع</button>
                     <a href="#" class="btn btn-red" style="display:flex;align-items:center;justify-content:center;gap:10px;">▶️ يوتيوب</a>
                 </div>
             </div>
             
             <div id="page-security" class="page">
                 <div class="tool">
-                    <div class="tool-img" style="background:linear-gradient(135deg,#1a1a2e,#0f3460);font-size:50px;">🛡️</div>
+                    <div class="tool-img" style="background:linear-gradient(135deg,#1a1a2e,#0f3460);">🛡️</div>
                     <div class="tool-name">حماية وأمان</div>
                     <ul class="feature-list">
                         <li>تطبيقات آمنة 100%</li>
@@ -575,7 +625,7 @@ html_part1 = '''<!DOCTYPE html>
                     </ul>
                     <div class="status status-working">✓ يعمل</div>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')">العودة للرئيسية</button>
             </div>
             
             <div id="page-delta" class="page">
@@ -601,10 +651,10 @@ html_part1 = '''<!DOCTYPE html>
                 </div>
                 <div class="social">
                     <a href="#" class="btn btn-blue">🎮 ديسكورد</a>
-                    <a href="#" class="btn btn-cyan">📱 تنزيل الموقع</a>
+                    <button class="btn btn-cyan" onclick="installApp()">📱 تنزيل الموقع</button>
                     <a href="#" class="btn btn-red">▶️ يوتيوب</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')" style="margin-top:16px">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')" style="margin-top:16px">العودة للرئيسية</button>
             </div>
             
             <div id="page-codex" class="page">
@@ -621,7 +671,7 @@ html_part1 = '''<!DOCTYPE html>
                     <div class="status status-broken">✕ لا يعمل</div>
                     <a href="#" class="btn btn-purple btn-disabled">CodeX VNG Install ⬇️</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')">العودة للرئيسية</button>
             </div>
             
             <div id="page-arceus" class="page">
@@ -639,7 +689,7 @@ html_part1 = '''<!DOCTYPE html>
                     <div class="status status-broken">✕ لا يعمل</div>
                     <a href="#" class="btn btn-purple btn-disabled">Arceus X Neo VNG Install ⬇️</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')">العودة للرئيسية</button>
             </div>
             
             <div id="page-cryptic" class="page">
@@ -657,7 +707,7 @@ html_part1 = '''<!DOCTYPE html>
                     <div class="status status-broken">✕ لا يعمل</div>
                     <a href="#" class="btn btn-purple btn-disabled">Cryptic VNG Install ⬇️</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')">العودة للرئيسية</button>
             </div>
             
             <div id="page-ronix" class="page">
@@ -674,7 +724,7 @@ html_part1 = '''<!DOCTYPE html>
                     <div class="status status-broken">✕ لا يعمل</div>
                     <a href="#" class="btn btn-purple btn-disabled">Ronix VNG Install ⬇️</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')">العودة للرئيسية</button>
             </div>
             
             <div id="page-trigon" class="page">
@@ -697,10 +747,10 @@ html_part1 = '''<!DOCTYPE html>
                 </div>
                 <div class="social">
                     <a href="#" class="btn btn-blue">🎮 ديسكورد</a>
-                    <a href="#" class="btn btn-cyan">📱 تنزيل الموقع</a>
+                    <button class="btn btn-cyan" onclick="installApp()">📱 تنزيل الموقع</button>
                     <a href="#" class="btn btn-red">▶️ يوتيوب</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')" style="margin-top:16px">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')" style="margin-top:16px">العودة للرئيسية</button>
             </div>
             
             <div id="page-vega" class="page">
@@ -715,7 +765,7 @@ html_part1 = '''<!DOCTYPE html>
                     <div class="status status-broken">✕ لا يعمل</div>
                     <a href="#" class="btn btn-purple btn-disabled">Vega X Install ⬇️</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')">العودة للرئيسية</button>
             </div>
             
             <div id="page-semo" class="page">
@@ -729,7 +779,7 @@ html_part1 = '''<!DOCTYPE html>
                     <div class="status status-broken">✕ لا يعمل</div>
                     <a href="#" class="btn btn-purple btn-disabled">Semo Install ⬇️</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')">العودة للرئيسية</button>
             </div>
             
             <div id="page-velocity" class="page">
@@ -744,7 +794,7 @@ html_part1 = '''<!DOCTYPE html>
                     <div class="status status-broken">✕ لا يعمل</div>
                     <a href="#" class="btn btn-purple btn-disabled">Velocity Install ⬇️</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')">العودة للرئيسية</button>
             </div>
             
             <div id="page-xeno" class="page">
@@ -759,7 +809,7 @@ html_part1 = '''<!DOCTYPE html>
                     <div class="status status-working">✓ يعمل</div>
                     <a href="#" class="btn btn-purple">Xeno Install ⬇️</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')">العودة للرئيسية</button>
             </div>
             
             <div id="page-delta-android" class="page">
@@ -784,10 +834,10 @@ html_part1 = '''<!DOCTYPE html>
                 </div>
                 <div class="social">
                     <a href="#" class="btn btn-blue">🎮 ديسكورد</a>
-                    <a href="#" class="btn btn-cyan">📱 تنزيل الموقع</a>
+                    <button class="btn btn-cyan" onclick="installApp()">📱 تنزيل الموقع</button>
                     <a href="#" class="btn btn-red">▶️ يوتيوب</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')" style="margin-top:16px">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')" style="margin-top:16px">العودة للرئيسية</button>
             </div>
             
             <div id="page-pc-hacker" class="page">
@@ -858,10 +908,10 @@ html_part1 = '''<!DOCTYPE html>
                 </div>
                 <div class="social">
                     <a href="#" class="btn btn-blue">🎮 ديسكورد</a>
-                    <a href="#" class="btn btn-cyan">📱 تنزيل الموقع</a>
+                    <button class="btn btn-cyan" onclick="installApp()">📱 تنزيل الموقع</button>
                     <a href="#" class="btn btn-red">▶️ يوتيوب</a>
                 </div>
-                <button class="btn btn-purple" onclick="goToPage(\'home\')" style="margin-top:16px">العودة للرئيسية</button>
+                <button class="btn btn-purple" onclick="goToPage('home')" style="margin-top:16px">العودة للرئيسية</button>
             </div>
             
         </div>
@@ -873,95 +923,95 @@ html_part1 = '''<!DOCTYPE html>
 
     <script>
         // خلفية متحركة
-        const bg = document.getElementById(\'bgParticles\');
+        const bg = document.getElementById('bgParticles');
         for (let i = 0; i < 25; i++) {
-            let p = document.createElement(\'i\');
-            p.style.left = Math.random() * 100 + \'%\';
-            p.style.top = Math.random() * 100 + \'%\';
-            p.style.animationDelay = Math.random() * 20 + \'s\';
-            p.style.animationDuration = (12 + Math.random() * 10) + \'s\';
+            let p = document.createElement('i');
+            p.style.left = Math.random() * 100 + '%';
+            p.style.top = Math.random() * 100 + '%';
+            p.style.animationDelay = Math.random() * 20 + 's';
+            p.style.animationDuration = (12 + Math.random() * 10) + 's';
             bg.appendChild(p);
         }
         
         // التنقل بين الصفحات
         function goToPage(pageId) {
-            document.querySelectorAll(\'.page\').forEach(p => p.classList.remove(\'active\'));
-            document.getElementById(\'page-\' + pageId).classList.add(\'active\');
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById('page-' + pageId).classList.add('active');
             window.scrollTo(0, 0);
             closeSidebar();
         }
         
         function goToTool(toolId) {
             const map = {
-                \'delta\': \'delta\',
-                \'delta-android\': \'delta-android\',
-                \'pc-hacker\': \'pc-hacker\'
+                'delta': 'delta',
+                'delta-android': 'delta-android',
+                'pc-hacker': 'pc-hacker'
             };
             goToPage(map[toolId] || toolId);
         }
         
         // Sidebar
         function toggleSidebar() {
-            document.getElementById(\'sidebar\').classList.toggle(\'active\');
-            document.getElementById(\'sidebarOverlay\').classList.toggle(\'active\');
+            document.getElementById('sidebar').classList.toggle('active');
+            document.getElementById('sidebarOverlay').classList.toggle('active');
         }
         
         function closeSidebar() {
-            document.getElementById(\'sidebar\').classList.remove(\'active\');
-            document.getElementById(\'sidebarOverlay\').classList.remove(\'active\');
+            document.getElementById('sidebar').classList.remove('active');
+            document.getElementById('sidebarOverlay').classList.remove('active');
         }
         
         function toggleSection(header) {
             const items = header.nextElementSibling;
-            const arrow = header.querySelector(\'.sidebar-arrow\');
-            items.classList.toggle(\'open\');
-            arrow.classList.toggle(\'rotated\');
+            const arrow = header.querySelector('.sidebar-arrow');
+            items.classList.toggle('open');
+            arrow.classList.toggle('rotated');
         }
         
         // Modal
         function showModal(type) {
-            const overlay = document.getElementById(\'modalOverlay\');
-            const title = document.getElementById(\'modalTitle\');
-            const content = document.getElementById(\'modalContent\');
+            const overlay = document.getElementById('modalOverlay');
+            const title = document.getElementById('modalTitle');
+            const content = document.getElementById('modalContent');
             
-            let html = \'\';
-            if (type === \'ios\') {
-                title.textContent = \'اختر ما تريد لـ iOS / ايفون\';
+            let html = '';
+            if (type === 'ios') {
+                title.textContent = 'اختر ما تريد لـ iOS / ايفون';
                 html = `
-                    <div class="modal-option" onclick="goToPage(\'delta\'); closeModal();">
+                    <div class="modal-option" onclick="goToPage('delta'); closeModal();">
                         <span class="modal-option-icon">⚡</span>
                         <b class="modal-option-title">هاك روبلوكس</b>
                         <span class="modal-option-sub">جميع ماكات الإكسكيتر</span>
                     </div>
-                    <div class="modal-option" onclick="goToPage(\'delta\'); closeModal();">
+                    <div class="modal-option" onclick="goToPage('delta'); closeModal();">
                         <span class="modal-option-icon">↩️</span>
                         <b class="modal-option-title">روبلوكس القديمه</b>
                         <span class="modal-option-sub">بيكورا (نسخ 2017-2021)</span>
                     </div>
                 `;
-            } else if (type === \'android\') {
-                title.textContent = \'اختر ما تريد لـ Android\';
+            } else if (type === 'android') {
+                title.textContent = 'اختر ما تريد لـ Android';
                 html = `
-                    <div class="modal-option" onclick="goToPage(\'delta-android\'); closeModal();">
+                    <div class="modal-option" onclick="goToPage('delta-android'); closeModal();">
                         <span class="modal-option-icon">⚡</span>
                         <b class="modal-option-title">هاك روبلوكس اندرويد</b>
                         <span class="modal-option-sub">جميع ماكات الإكسكيتر</span>
                     </div>
-                    <div class="modal-option" onclick="goToPage(\'delta-android\'); closeModal();">
+                    <div class="modal-option" onclick="goToPage('delta-android'); closeModal();">
                         <span class="modal-option-icon">↩️</span>
                         <b class="modal-option-title">روبلوكس القديمه</b>
                         <span class="modal-option-sub">بيكورا (نسخ 2017-2021)</span>
                     </div>
                 `;
-            } else if (type === \'pc\') {
-                title.textContent = \'اختر ما تريد لـ PC\';
+            } else if (type === 'pc') {
+                title.textContent = 'اختر ما تريد لـ PC';
                 html = `
-                    <div class="modal-option" onclick="goToPage(\'pc-hacker\'); closeModal();">
+                    <div class="modal-option" onclick="goToPage('pc-hacker'); closeModal();">
                         <span class="modal-option-icon">💻</span>
                         <b class="modal-option-title">هاك روبلوكس بي سي</b>
                         <span class="modal-option-sub">جميع ماكات الإكسكيتر</span>
                     </div>
-                    <div class="modal-option" onclick="goToPage(\'pc-hacker\'); closeModal();">
+                    <div class="modal-option" onclick="goToPage('pc-hacker'); closeModal();">
                         <span class="modal-option-icon">↩️</span>
                         <b class="modal-option-title">روبلوكس القديمه</b>
                         <span class="modal-option-sub">بيكورا (نسخ 2017-2021)</span>
@@ -970,19 +1020,58 @@ html_part1 = '''<!DOCTYPE html>
             }
             
             content.innerHTML = html;
-            overlay.classList.add(\'active\');
+            overlay.classList.add('active');
         }
         
         function closeModal(e) {
-            if (!e || e.target.id === \'modalOverlay\') {
-                document.getElementById(\'modalOverlay\').classList.remove(\'active\');
+            if (!e || e.target.id === 'modalOverlay') {
+                document.getElementById('modalOverlay').classList.remove('active');
+            }
+        }
+        
+        // Toast notification
+        function showToast(msg) {
+            const t = document.getElementById('toast');
+            t.textContent = msg;
+            t.classList.add('show');
+            setTimeout(() => t.classList.remove('show'), 3000);
+        }
+        
+        // Install App / Add to Home Screen
+        let deferredPrompt = null;
+        window.addEventListener('beforeinstallprompt', (e) => {
+            e.preventDefault();
+            deferredPrompt = e;
+        });
+        
+        function installApp() {
+            // iOS Safari
+            const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+            const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+            
+            if (isIOS && isSafari) {
+                showToast('📱 اضغط على زر المشاركة ثم "إضافة للشاشة الرئيسية"');
+                return;
+            }
+            
+            // Android Chrome
+            if (deferredPrompt) {
+                deferredPrompt.prompt();
+                deferredPrompt.userChoice.then((choiceResult) => {
+                    if (choiceResult.outcome === 'accepted') {
+                        showToast('✅ تم إضافة الموقع للشاشة الرئيسية!');
+                    }
+                    deferredPrompt = null;
+                });
+            } else {
+                showToast('📱 اضغط على القائمة (⋮) ثم "إضافة للشاشة الرئيسية"');
             }
         }
         
         // منع التكبير على الجوال
-        document.addEventListener(\'gesturestart\', e => e.preventDefault());
+        document.addEventListener('gesturestart', e => e.preventDefault());
         let lastTouch = 0;
-        document.addEventListener(\'touchend\', e => {
+        document.addEventListener('touchend', e => {
             const now = Date.now();
             if (now - lastTouch <= 300) e.preventDefault();
             lastTouch = now;
@@ -991,11 +1080,11 @@ html_part1 = '''<!DOCTYPE html>
 </body>
 </html>'''
 
-output_path = '/mnt/agents/output/z9x-website.html'
+output_path = '/mnt/agents/output/index.html'
 with open(output_path, 'w', encoding='utf-8') as f:
-    f.write(html_part1)
+    f.write(html_content)
 
-file_size_kb = len(html_part1.encode('utf-8')) / 1024
+file_size_kb = len(html_content.encode('utf-8')) / 1024
 print(f"✅ تم الحفظ: {output_path}")
 print(f"📊 الحجم: {file_size_kb:.1f} KB")
-print(f"🖼️  الصورة مضمنة داخل الملف (base64)")
+print(f"🚫 لا يوجد كود Python - ملف HTML نقي 100%")
